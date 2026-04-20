@@ -24,6 +24,8 @@ import {
   Bell,
   Globe,
   Zap,
+  Info,
+  Monitor,
   CheckCircle2,
   Trophy,
   Clock,
@@ -391,14 +393,24 @@ const LeaderboardPage = ({ directorates, activeType, setType }: any) => {
 const formatIDR = (val: number) => 
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
 
-const StatCard = ({ title, value, subValue, icon: Icon, trend, color, active, percentage = 62.5 }: any) => (
+const StatCard = ({ title, value, subValue, icon: Icon, trend, color, active, percentage = 62.5, tooltip }: any) => (
   <motion.div 
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
-    className={`bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-1 relative overflow-hidden transition-all duration-300 ${active ? 'ring-2 ring-indigo-200' : ''}`}
+    className={`bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-1 relative transition-all duration-300 ${active ? 'ring-2 ring-indigo-200' : ''}`}
   >
     <div className="flex justify-between items-start mb-2">
-      <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">{title}</span>
+      <div className="flex items-center gap-1.5 group relative">
+        <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">{title}</span>
+        {tooltip && (
+          <div className="relative">
+            <Info size={12} className="text-slate-300 cursor-help" />
+            <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-slate-900 text-white text-[9px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl leading-relaxed">
+              {tooltip}
+            </div>
+          </div>
+        )}
+      </div>
       {trend && (
         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 ${trend > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
           {trend > 0 ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
@@ -437,6 +449,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'overview' | 'detail' | 'leaderboard'>('overview');
   const [leaderboardType, setLeaderboardType] = useState<'absorption' | 'ikpa' | 'physical' | 'earlybird'>('absorption');
   const [isAutoSlide, setIsAutoSlide] = useState<boolean>(false);
+  const [isTvMode, setIsTvMode] = useState<boolean>(false);
   const [slideIndex, setSlideIndex] = useState<number>(0);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -451,6 +464,21 @@ export default function App() {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // TV Mode Auto Rotation Logic
+  useEffect(() => {
+    let interval: any;
+    if (isTvMode) {
+      interval = setInterval(() => {
+        setActiveTab(prev => {
+          if (prev === 'overview') return 'detail';
+          if (prev === 'detail') return 'leaderboard';
+          return 'overview';
+        });
+      }, 15000); // Rotate every 15 seconds for cinematic effect
+    }
+    return () => clearInterval(interval);
+  }, [isTvMode]);
 
   // Auto Cycle Leaderboard
   useEffect(() => {
@@ -619,6 +647,14 @@ export default function App() {
           {/* Auto-Slide Control */}
           <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-xl shrink-0">
             <button 
+              onClick={() => { setIsTvMode(!isTvMode); if(!isTvMode) setActiveTab('overview'); }}
+              className={`flex items-center gap-2 px-3 py-1 rounded-lg text-[10px] font-black transition-all uppercase tracking-wider ${isTvMode ? 'bg-indigo-600 text-white shadow-lg ring-2 ring-indigo-200' : 'bg-white text-slate-500 hover:bg-slate-100 border border-slate-200'}`}
+            >
+              <Monitor size={12} className={isTvMode ? 'animate-pulse' : ''} />
+              {isTvMode ? 'TV MODE: ON' : 'TV MODE'}
+            </button>
+            <div className="w-[1px] h-4 bg-slate-200 mx-1" />
+            <button 
               onClick={() => { setIsAutoSlide(!isAutoSlide); if(!isAutoSlide) setSlideIndex(0); }}
               className={`flex items-center gap-2 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${isAutoSlide ? 'bg-amber-100 text-amber-700 shadow-sm ring-1 ring-amber-200' : 'bg-white text-slate-500 hover:bg-slate-100 border border-slate-200'}`}
             >
@@ -765,6 +801,7 @@ export default function App() {
                 subValue="Target: 95.00"
                 icon={Target}
                 color="emerald"
+                tooltip="Indikator Kinerja Pelaksanaan Anggaran (IKPA) adalah alat ukur kualitas kinerja pelaksanaan anggaran berdasarkan kriteria: Akurasi RPD, Minim Revisi DIPA, dan Kecepatan Penerbitan SPM."
               />
               <StatCard 
                 title="Status Deviasi" 
@@ -927,7 +964,7 @@ export default function App() {
                    <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">KONDISI REALISASI VS TARGET (S-CURVE)</h3>
                    <div className="flex gap-3 text-[9px] font-black">
                       <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded bg-indigo-500" /> AKTUAL</div>
-                      <div className="flex items-center gap-1.5 opacity-50"><div className="w-2 h-2 rounded border border-slate-400 border-dashed" /> TARGET</div>
+                      <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded border border-slate-400 border-dashed" /> TARGET</div>
                    </div>
                 </div>
                 <div className="h-[220px]">
@@ -957,21 +994,22 @@ export default function App() {
                       />
                       <Area 
                         type="monotone" 
-                        dataKey="target" 
-                        stroke="#cbd5e1" 
-                        strokeWidth={1.5}
-                        strokeDasharray="4 4"
-                        fill="transparent"
-                        animationDuration={2000}
-                      />
-                      <Area 
-                        type="monotone" 
                         dataKey="actual" 
                         stroke="#4f46e5" 
                         strokeWidth={4}
                         fill="url(#colorActual)" 
-                        animationBegin={500}
-                        animationDuration={2500}
+                        animationBegin={0}
+                        animationDuration={1500}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="target" 
+                        stroke="#94a3b8" 
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        fill="transparent"
+                        animationBegin={1500}
+                        animationDuration={1500}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
